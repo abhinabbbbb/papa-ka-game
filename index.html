@@ -1,359 +1,528 @@
-import React, { useState, useEffect } from 'react';
-import { initializeApp } from 'firebase/app';
-import { 
-  getFirestore, 
-  doc, 
-  setDoc, 
-  onSnapshot, 
-  updateDoc, 
-  deleteDoc 
-} from 'firebase/firestore';
-import { 
-  getAuth, 
-  signInAnonymously, 
-  signInWithCustomToken,
-  onAuthStateChanged 
-} from 'firebase/auth';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parchi Trading - PAPA KA GAME</title>
+    
+    <!-- Tailwind CSS (Direct CDN for styling) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM (Direct CDN) -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel (To compile JSX in the browser) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
 
-// ==========================================
-// 🚀 TERA ASLI FIREBASE CONFIG (FIXED)
-// ==========================================
-const myFirebaseConfig = {
-  apiKey: "AIzaSyDzr59rONvNpo9-VllDbdGz--MUPjAq6jo",
-  authDomain: "papa-ka-game.firebaseapp.com",
-  projectId: "papa-ka-game",
-  storageBucket: "papa-ka-game.firebasestorage.app",
-  messagingSenderId: "972552037901",
-  appId: "1:972552037901:web:0e8c86fe84f8efb1169744",
-  measurementId: "G-Q44XZ9GSMN"
-};
+    <!-- Main Game Logic -->
+    <script type="text/babel" data-type="module">
+        // Firebase Imports (Direct URL for browser modules)
+        import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-// Canvas environment globals logic
-const firebaseConfig = typeof __firebase_config !== 'undefined' 
-  ? JSON.parse(__firebase_config) 
-  : myFirebaseConfig;
+        const { useState, useEffect } = React;
 
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'parchi-game-prod-v1';
+        // ==========================================
+        // 🚀 TERA ASLI FIREBASE CONFIG
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyDzr59rONvNPo9-VllDbdGz--MUPjAq6jo", 
+            authDomain: "papa-ka-game.firebaseapp.com",
+            projectId: "papa-ka-game",
+            storageBucket: "papa-ka-game.appspot.com", 
+            messagingSenderId: "972552037901",
+            appId: "1:972552037901:web:0e8c86fe84f8efb1169744",
+            measurementId: "G-Q44XZ9GSMN"
+        };
 
-// Firebase Initialize
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+        const appId = 'parchi-game-prod-v1'; // Fixed App ID for database path
 
-const CARDS_DATA = [
-  { type: 'Apple', points: 1000, icon: '🍎' },
-  { type: 'Banana', points: 500, icon: '🍌' },
-  { type: 'Grapes', points: 700, icon: '🍇' },
-];
+        // Firebase Initialize
+        const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-const App = () => {
-  const [user, setUser] = useState(null);
-  const [userName, setUserName] = useState(localStorage.getItem('parchi_name') || '');
-  const [tempName, setTempName] = useState('');
-  const [gameState, setGameState] = useState(null);
-  const [selectedCardIndex, setSelectedCardIndex] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [loginError, setLoginError] = useState("");
+        const CARDS_DATA = [
+            { type: 'Apple', points: 1000, icon: '🍎' },
+            { type: 'Banana', points: 500, icon: '🍌' },
+            { type: 'Grapes', points: 700, icon: '🍇' },
+        ];
 
-  // Naya Role System - Koi bhi naam chalega, par "papa kali gand" Master banega
-  const getInGameName = (name) => {
-    const lowerName = name?.toLowerCase();
-    return (lowerName === "papa kali gand" || lowerName === "master abhinav") ? "PAPA" : name;
-  };
-  
-  const getRoleTitle = (name) => {
-    const lowerName = name?.toLowerCase();
-    return (lowerName === "papa kali gand" || lowerName === "master abhinav") ? "Master" : "Player";
-  };
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [userName, setUserName] = useState(localStorage.getItem('parchi_name') || '');
+            const [tempName, setTempName] = useState('');
+            const [gameState, setGameState] = useState(null);
+            const [selectedCardIndex, setSelectedCardIndex] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [errorMsg, setErrorMsg] = useState("");
+            const [loginError, setLoginError] = useState("");
 
-  // Check agar current player PAPA hai
-  const isPapa = getInGameName(userName) === "PAPA";
+            // Naya Role System
+            const getInGameName = (name) => {
+                const lowerName = name?.toLowerCase();
+                return (lowerName === "papa kali gand" || lowerName === "master abhinav") ? "PAPA" : name;
+            };
+            
+            const getRoleTitle = (name) => {
+                const lowerName = name?.toLowerCase();
+                return (lowerName === "papa kali gand" || lowerName === "master abhinav") ? "Master" : "Player";
+            };
 
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (err) {
-        console.error("Auth failed:", err);
-        setErrorMsg("Login issue! Firebase console mein 'Anonymous Auth' on kar bhai.");
-      }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+            const isPapa = getInGameName(userName) === "PAPA";
 
-  useEffect(() => {
-    if (!user || !userName) return;
-    const gameDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', 'main');
-    const unsubscribe = onSnapshot(gameDocRef, (snapshot) => {
-      if (snapshot.exists()) setGameState(snapshot.data());
-      else setGameState(null);
-    }, (error) => console.error("Firestore error:", error));
-    return () => unsubscribe();
-  }, [user, userName]);
-
-  const handleLogin = () => {
-    const trimmed = tempName.trim();
-    // Ab koi bhi naam allow hoga
-    if (trimmed.length > 0) {
-      setUserName(trimmed);
-      localStorage.setItem('parchi_name', trimmed);
-      setLoginError("");
-    } else {
-      setLoginError("Bhai, apna naam toh daal!");
-    }
-  };
-
-  const createGame = async () => {
-    if (!user || !userName) return;
-    const deck = [];
-    CARDS_DATA.forEach(item => {
-      for (let i = 0; i < 3; i++) deck.push({ ...item, id: Math.random().toString(36).substr(2, 9) });
-    });
-    const shuffled = deck.sort(() => Math.random() - 0.5);
-
-    const newState = {
-      players: [{ uid: user.uid, name: getInGameName(userName) }],
-      hands: { [user.uid]: shuffled.slice(0, 3) },
-      deck: shuffled.slice(3),
-      turnIndex: 0,
-      status: 'waiting',
-      winner: null
-    };
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', 'main'), newState);
-  };
-
-  const joinGame = async () => {
-    if (!user || !gameState || !userName) return;
-    if (gameState.players.some(p => p.uid === user.uid)) return;
-    if (gameState.players.length >= 3) return;
-
-    const updatedPlayers = [...gameState.players, { uid: user.uid, name: getInGameName(userName) }];
-    const myHand = gameState.deck.slice(0, 3);
-    const restDeck = gameState.deck.slice(3);
-
-    const updates = {
-      players: updatedPlayers,
-      [`hands.${user.uid}`]: myHand,
-      deck: restDeck,
-      status: updatedPlayers.length === 3 ? 'playing' : 'waiting'
-    };
-    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', 'main'), updates);
-  };
-
-  const passCard = async () => {
-    if (!user || selectedCardIndex === null || !gameState || gameState.status !== 'playing') return;
-    const myIdx = gameState.players.findIndex(p => p.uid === user.uid);
-    if (gameState.turnIndex !== myIdx) return;
-
-    const nextIdx = (myIdx + 1) % 3;
-    const nextUid = gameState.players[nextIdx].uid;
-    const myHand = [...gameState.hands[user.uid]];
-    const nextHand = [...gameState.hands[nextUid]];
-
-    const passed = myHand.splice(selectedCardIndex, 1)[0];
-    nextHand.push(passed);
-
-    const updates = {
-      [`hands.${user.uid}`]: myHand,
-      [`hands.${nextUid}`]: nextHand,
-      turnIndex: nextIdx
-    };
-
-    const types = nextHand.map(c => c.type);
-    if (new Set(types).size === 1 && nextHand.length === 3) {
-      updates.status = 'finished';
-      updates.winner = { name: gameState.players[nextIdx].name, type: types[0], points: nextHand[0].points };
-    }
-    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', 'main'), updates);
-    setSelectedCardIndex(null);
-  };
-
-  const resetGame = async () => {
-    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', 'main'));
-  };
-
-  if (loading) return <div className="h-screen flex items-center justify-center bg-orange-50 font-black text-orange-600 tracking-widest uppercase animate-pulse">PAPA KA GAME LOADING...</div>;
-
-  if (errorMsg) return (
-    <div className="h-screen flex flex-col items-center justify-center bg-red-50 text-red-600 p-10 text-center">
-      <h2 className="text-2xl font-black mb-4 uppercase tracking-tighter">Config Error!</h2>
-      <p className="font-bold">{errorMsg}</p>
-      <div className="mt-6 bg-white p-6 rounded-2xl text-xs text-gray-500 text-left max-w-sm border-b-4 border-red-100">
-        <p className="mb-1">1. Go to Firebase Console.</p>
-        <p className="mb-1">2. Authentication {'->'} Sign-in Method {'->'} Enable Anonymous.</p>
-        <p className="mb-1">3. Firestore Database {'->'} Create (Test Mode).</p>
-      </div>
-    </div>
-  );
-
-  if (!userName) {
-    return (
-      <div className="min-h-screen bg-orange-50 flex items-center justify-center p-4 font-sans">
-        <div className="bg-white p-10 rounded-[3rem] shadow-2xl w-full max-w-sm text-center border-b-[12px] border-orange-200 transform transition-all hover:scale-105 duration-300">
-          <div className="text-6xl mb-4 animate-bounce">👋</div>
-          <h2 className="text-3xl font-black text-gray-800 mb-1 uppercase tracking-tighter">Player Login</h2>
-          <p className="text-[10px] text-gray-400 mb-8 font-black uppercase tracking-widest italic tracking-tighter">Apna Naam Batao</p>
-          <input 
-            type="text" 
-            placeholder="Naam daalo..."
-            value={tempName}
-            onChange={(e) => setTempName(e.target.value)}
-            className="w-full px-6 py-4 rounded-2xl border-2 border-orange-100 outline-none mb-4 text-center font-bold text-lg focus:border-orange-500 bg-gray-50 transition-colors"
-          />
-          {loginError && <p className="text-red-500 text-[10px] font-black mb-4 uppercase">{loginError}</p>}
-          <button onClick={handleLogin} className="w-full bg-orange-500 hover:bg-orange-600 transition-colors text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 text-sm uppercase tracking-[0.1em]">Verify & Enter</button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-orange-50 p-4 font-sans flex flex-col items-center">
-      
-      <header className="text-center mb-8 mt-4">
-        <h1 className="text-4xl font-black text-orange-600 tracking-tighter drop-shadow-sm uppercase">Parchi Trading</h1>
-        <div className={`mt-2 inline-flex items-center gap-2 px-5 py-2 rounded-full shadow-sm border ${isPapa ? 'bg-gradient-to-r from-yellow-300 to-yellow-500 border-yellow-400 text-white animate-pulse' : 'bg-white border-orange-100 text-gray-800'}`}>
-            <span className={`text-[10px] font-black uppercase tracking-widest ${isPapa ? 'text-yellow-100' : 'text-gray-400'}`}>
-                {getRoleTitle(userName)}:
-            </span>
-            <span className="text-sm font-black uppercase flex items-center gap-1">
-                {isPapa && '👑'} {getInGameName(userName)}
-            </span>
-        </div>
-      </header>
-
-      {!gameState ? (
-        <div className="bg-white p-12 rounded-[4rem] shadow-xl text-center max-w-md w-full border-b-[10px] border-orange-200">
-          <div className="text-7xl mb-6">🎲</div>
-          <p className="text-xl mb-10 text-gray-700 font-black italic uppercase tracking-tighter">
-            {isPapa ? "Ready for the round, PAPA?" : "Waiting for Master to start..."}
-          </p>
-          {isPapa ? (
-             <button onClick={createGame} className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-black py-5 rounded-[2.5rem] shadow-xl active:scale-95 text-lg uppercase tracking-widest hover:from-orange-600 hover:to-red-600 transition-all">START GAME</button>
-          ) : (
-             <div className="text-sm text-gray-400 font-bold uppercase tracking-widest">Master ka intezaar karo...</div>
-          )}
-        </div>
-      ) : (
-        <div className="w-full max-w-2xl">
-          <div className="bg-white rounded-3xl shadow-sm p-6 mb-8 flex justify-between border-2 border-orange-50 items-center">
-            <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</p>
-              <p className="font-black text-orange-600 text-xl italic uppercase">
-                {gameState.status === 'waiting' ? `Waiting (${gameState.players.length}/3)` : '🔥 LIVE'}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Turn</p>
-              <p className={`font-black text-xl italic uppercase ${gameState.players[gameState.turnIndex]?.name === 'PAPA' ? 'text-yellow-500 drop-shadow-md' : 'text-gray-800'}`}>
-                {gameState.status === 'playing' ? (
-                   gameState.players[gameState.turnIndex]?.name === 'PAPA' ? '👑 PAPA IS THINKING...' : gameState.players[gameState.turnIndex]?.name
-                ) : '---'}
-              </p>
-            </div>
-          </div>
-
-          {gameState.status === 'waiting' ? (
-            <div className="bg-white/50 border-4 border-dashed border-orange-200 p-10 rounded-[3rem] text-center mb-10">
-                <div className="animate-spin text-5xl mb-4 inline-block">⌛</div>
-                <h3 className="text-xl font-black text-orange-800/60 uppercase tracking-tighter mb-6">Players Connected:</h3>
+            // Initialize Auth
+            useEffect(() => {
+                const initAuth = async () => {
+                    try {
+                        // Vercel pe anonymous auth use hoga
+                        await signInAnonymously(auth);
+                    } catch (err) {
+                        console.error("Auth failed:", err);
+                        setErrorMsg("Login issue! Firebase console mein 'Anonymous Auth' zaroor on kar lena.");
+                    }
+                };
+                initAuth();
                 
-                {/* 👑 VIP ENTRY HIGHLIGHT LIST 👑 */}
-                <div className="flex flex-col gap-3 max-w-xs mx-auto mb-8">
-                    {gameState.players.map((p, idx) => (
-                        <div key={idx} className={`py-3 px-6 rounded-2xl font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 transition-all ${p.name === 'PAPA' ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-[0_0_20px_rgba(234,179,8,0.5)] border-2 border-yellow-200 scale-105 animate-pulse' : 'bg-white border-2 border-orange-100 text-gray-600'}`}>
-                            {p.name === 'PAPA' ? '👑 PAPA (MASTER) HAS JOINED 👑' : `👤 ${p.name}`}
+                const unsubscribe = onAuthStateChanged(auth, (u) => {
+                    setUser(u);
+                    setLoading(false);
+                });
+                return () => unsubscribe();
+            }, []);
+
+            // Game State Listener
+            useEffect(() => {
+                if (!user || !userName) return;
+                const gameDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', 'main');
+                const unsubscribe = onSnapshot(gameDocRef, (snapshot) => {
+                    if (snapshot.exists()) {
+                        setGameState(snapshot.data());
+                    } else {
+                        setGameState(null);
+                    }
+                }, (error) => console.error("Firestore error:", error));
+                return () => unsubscribe();
+            }, [user, userName]);
+
+            const handleLogin = () => {
+                const trimmed = tempName.trim();
+                if (trimmed.length > 0) {
+                    setUserName(trimmed);
+                    localStorage.setItem('parchi_name', trimmed);
+                    setLoginError("");
+                } else {
+                    setLoginError("Bhai, apna naam toh daal!");
+                }
+            };
+
+            const createGame = async () => {
+                if (!user || !userName) return;
+                const deck = [];
+                CARDS_DATA.forEach(item => {
+                    for (let i = 0; i < 3; i++) deck.push({ ...item, id: Math.random().toString(36).substr(2, 9) });
+                });
+                const shuffled = deck.sort(() => Math.random() - 0.5);
+
+                const newState = {
+                    players: [{ uid: user.uid, name: getInGameName(userName) }],
+                    hands: { [user.uid]: shuffled.slice(0, 3) },
+                    deck: shuffled.slice(3),
+                    turnIndex: 0,
+                    status: 'waiting',
+                    winner: null,
+                    round: 1, 
+                    scores: { [user.uid]: 0 }, 
+                    direction: 1
+                };
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', 'main'), newState);
+            };
+
+            const joinGame = async () => {
+                if (!user || !gameState || !userName) return;
+                if (gameState.players.some(p => p.uid === user.uid)) return;
+                if (gameState.players.length >= 3) return;
+
+                const updatedPlayers = [...gameState.players, { uid: user.uid, name: getInGameName(userName) }];
+                const myHand = gameState.deck.slice(0, 3);
+                const restDeck = gameState.deck.slice(3);
+
+                const updates = {
+                    players: updatedPlayers,
+                    [`hands.${user.uid}`]: myHand,
+                    deck: restDeck,
+                    [`scores.${user.uid}`]: 0, 
+                    status: updatedPlayers.length === 3 ? 'setup' : 'waiting'
+                };
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', 'main'), updates);
+            };
+
+            const startRound = async (dirStr) => {
+                const dirVal = dirStr === 'CW' ? 1 : -1;
+                const updates = { status: 'playing', direction: dirVal, turnIndex: 0 };
+
+                let instantWinner = null;
+                for (const p of gameState.players) {
+                    const hand = gameState.hands[p.uid];
+                    const tCounts = {};
+                    hand.forEach(c => tCounts[c.type] = (tCounts[c.type] || 0) + 1);
+                    const wType = Object.keys(tCounts).find(t => tCounts[t] === 3);
+                    if (wType) {
+                        instantWinner = { name: p.name, type: wType, uid: p.uid };
+                        break;
+                    }
+                }
+
+                if (instantWinner) {
+                    const points = CARDS_DATA.find(c => c.type === instantWinner.type).points;
+                    updates.status = gameState.round >= 4 ? 'game_over' : 'round_over';
+                    updates.winner = { name: instantWinner.name, type: instantWinner.type, points };
+                    updates[`scores.${instantWinner.uid}`] = (gameState.scores[instantWinner.uid] || 0) + points;
+                }
+
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', 'main'), updates);
+            };
+
+            const startNextRound = async () => {
+                const deck = [];
+                CARDS_DATA.forEach(item => {
+                    for (let i = 0; i < 3; i++) deck.push({ ...item, id: Math.random().toString(36).substr(2, 9) });
+                });
+                const shuffled = deck.sort(() => Math.random() - 0.5);
+
+                const updates = {
+                    round: gameState.round + 1,
+                    status: 'setup',
+                    winner: null
+                };
+                gameState.players.forEach((p, i) => {
+                    updates[`hands.${p.uid}`] = shuffled.slice(i * 3, i * 3 + 3);
+                });
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', 'main'), updates);
+            };
+
+            const passCard = async () => {
+                if (!user || selectedCardIndex === null || !gameState || gameState.status !== 'playing') return;
+                const myIdx = gameState.players.findIndex(p => p.uid === user.uid);
+                if (gameState.turnIndex !== myIdx) return;
+
+                const nextIdx = (myIdx + gameState.direction + 3) % 3;
+                const nextUid = gameState.players[nextIdx].uid;
+                
+                const myHand = [...gameState.hands[user.uid]];
+                const nextHand = [...gameState.hands[nextUid]];
+
+                const passed = myHand.splice(selectedCardIndex, 1)[0];
+                nextHand.push(passed);
+
+                const updates = {
+                    [`hands.${user.uid}`]: myHand,
+                    [`hands.${nextUid}`]: nextHand,
+                    turnIndex: nextIdx
+                };
+
+                const typeCounts = {};
+                nextHand.forEach(c => typeCounts[c.type] = (typeCounts[c.type] || 0) + 1);
+                const winningType = Object.keys(typeCounts).find(t => typeCounts[t] >= 3);
+
+                const myTypeCounts = {};
+                myHand.forEach(c => myTypeCounts[c.type] = (myTypeCounts[c.type] || 0) + 1);
+                const myWinningType = Object.keys(myTypeCounts).find(t => myTypeCounts[t] === 3);
+
+                let finalWinner = null;
+                let winUid = null;
+
+                if (winningType) {
+                    finalWinner = { name: gameState.players[nextIdx].name, type: winningType };
+                    winUid = nextUid;
+                } else if (myWinningType) {
+                    finalWinner = { name: gameState.players[myIdx].name, type: myWinningType };
+                    winUid = user.uid;
+                }
+
+                if (finalWinner) {
+                    const points = CARDS_DATA.find(c => c.type === finalWinner.type).points;
+                    updates.status = gameState.round >= 4 ? 'game_over' : 'round_over';
+                    updates.winner = { ...finalWinner, points };
+                    updates[`scores.${winUid}`] = (gameState.scores[winUid] || 0) + points;
+                }
+
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', 'main'), updates);
+                setSelectedCardIndex(null);
+            };
+
+            const resetGame = async () => {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', 'main'));
+            };
+
+            if (loading) return <div className="h-screen flex items-center justify-center bg-orange-50 font-black text-orange-600 tracking-widest uppercase animate-pulse">PAPA KA GAME LOADING...</div>;
+
+            if (errorMsg) return (
+                <div className="h-screen flex flex-col items-center justify-center bg-red-50 text-red-600 p-10 text-center">
+                    <h2 className="text-2xl font-black mb-4 uppercase tracking-tighter">Config Error!</h2>
+                    <p className="font-bold">{errorMsg}</p>
+                </div>
+            );
+
+            // LOGIN SCREEN
+            if (!userName) {
+                return (
+                    <div className="min-h-screen bg-orange-50 flex items-center justify-center p-4 font-sans">
+                        <div className="bg-white p-10 rounded-[3rem] shadow-2xl w-full max-w-sm text-center border-b-[12px] border-orange-200 transform transition-all hover:scale-105 duration-300">
+                            <div className="text-6xl mb-4">👋</div>
+                            <h2 className="text-3xl font-black text-gray-800 mb-1 uppercase tracking-tighter">Player Login</h2>
+                            <p className="text-[10px] text-gray-400 mb-8 font-black uppercase tracking-widest italic tracking-tighter">Apna Naam Batao</p>
+                            <input 
+                                type="text" 
+                                placeholder="Naam daalo..."
+                                value={tempName}
+                                onChange={(e) => setTempName(e.target.value)}
+                                className="w-full px-6 py-4 rounded-2xl border-2 border-orange-100 outline-none mb-4 text-center font-bold text-lg focus:border-orange-500 bg-gray-50 transition-colors"
+                            />
+                            {loginError && <p className="text-red-500 text-[10px] font-black mb-4 uppercase">{loginError}</p>}
+                            <button onClick={handleLogin} className="w-full bg-orange-500 hover:bg-orange-600 transition-colors text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 text-sm uppercase tracking-[0.1em]">Verify & Enter</button>
                         </div>
-                    ))}
+                    </div>
+                );
+            }
+
+            // MAIN GAME SCREEN
+            return (
+                <div className="min-h-screen bg-orange-50 p-4 font-sans flex flex-col items-center overflow-x-hidden">
+                    
+                    <header className="text-center mb-8 mt-4">
+                        <h1 className="text-4xl font-black text-orange-600 tracking-tighter drop-shadow-sm uppercase">Parchi Trading</h1>
+                        <div className={`mt-2 inline-flex items-center gap-2 px-5 py-2 rounded-full shadow-sm border ${isPapa ? 'bg-gradient-to-r from-yellow-300 to-yellow-500 border-yellow-400 text-white animate-pulse' : 'bg-white border-orange-100 text-gray-800'}`}>
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${isPapa ? 'text-yellow-100' : 'text-gray-400'}`}>
+                                        {getRoleTitle(userName)}:
+                                </span>
+                                <span className="text-sm font-black uppercase flex items-center gap-1">
+                                        {isPapa && '👑'} {getInGameName(userName)}
+                                </span>
+                        </div>
+                    </header>
+
+                    {/* SCOREBOARD */}
+                    {gameState && gameState.status !== 'waiting' && (
+                            <div className="w-full max-w-2xl bg-white p-4 rounded-[2rem] shadow-md border-2 border-orange-100 mb-6 flex justify-around items-center">
+                                    {gameState.players.map(p => (
+                                            <div key={p.uid} className="text-center px-2">
+                                                    <p className="text-[9px] text-gray-400 uppercase font-black tracking-widest">{p.name === 'PAPA' ? '👑 PAPA' : p.name}</p>
+                                                    <p className="text-orange-600 font-black text-xl">{gameState.scores[p.uid] || 0}</p>
+                                            </div>
+                                    ))}
+                                    <div className="text-center border-l-2 border-orange-100 pl-6 ml-2">
+                                            <p className="text-[9px] text-gray-400 uppercase font-black tracking-widest">Round</p>
+                                            <p className="text-gray-800 font-black text-xl">{gameState.round} / 4</p>
+                                    </div>
+                            </div>
+                    )}
+
+                    {!gameState ? (
+                        <div className="bg-white p-12 rounded-[4rem] shadow-xl text-center max-w-md w-full border-b-[10px] border-orange-200 mx-4">
+                            <div className="text-7xl mb-6">🎲</div>
+                            <p className="text-xl mb-10 text-gray-700 font-black italic uppercase tracking-tighter">
+                                {isPapa ? "Ready for the round, PAPA?" : "Waiting for Master to start..."}
+                            </p>
+                            {isPapa ? (
+                                 <button onClick={createGame} className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-black py-5 rounded-[2.5rem] shadow-xl active:scale-95 text-lg uppercase tracking-widest hover:from-orange-600 hover:to-red-600 transition-all">START GAME</button>
+                            ) : (
+                                 <div className="text-sm text-gray-400 font-bold uppercase tracking-widest">Master ka intezaar karo...</div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="w-full max-w-2xl px-2">
+                            <div className="bg-white rounded-3xl shadow-sm p-6 mb-8 flex justify-between border-2 border-orange-50 items-center">
+                                <div>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</p>
+                                    <p className="font-black text-orange-600 text-xl italic uppercase">
+                                        {gameState.status === 'waiting' ? `Waiting (${gameState.players.length}/3)` : '🔥 LIVE'}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Turn</p>
+                                    <p className={`font-black text-xl italic uppercase ${gameState.players[gameState.turnIndex]?.name === 'PAPA' ? 'text-yellow-500 drop-shadow-md' : 'text-gray-800'}`}>
+                                        {gameState.status === 'playing' ? (
+                                             gameState.players[gameState.turnIndex]?.name === 'PAPA' ? '👑 PAPA IS THINKING...' : gameState.players[gameState.turnIndex]?.name
+                                        ) : '---'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {gameState.status === 'playing' && (
+                                    <div className="text-center mb-6">
+                                            <span className="bg-orange-100 text-orange-800 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
+                                                    Direction: {gameState.direction === 1 ? '↻ Clockwise (Seedha)' : '↺ Anti-Clockwise (Ulta)'}
+                                            </span>
+                                    </div>
+                            )}
+
+                            {gameState.status === 'waiting' ? (
+                                <div className="bg-white/50 border-4 border-dashed border-orange-200 p-10 rounded-[3rem] text-center mb-10">
+                                        <div className="animate-spin text-5xl mb-4 inline-block">⌛</div>
+                                        <h3 className="text-xl font-black text-orange-800/60 uppercase tracking-tighter mb-6">Players Connected:</h3>
+                                        
+                                        <div className="flex flex-col gap-3 max-w-xs mx-auto mb-8">
+                                                {gameState.players.map((p, idx) => (
+                                                        <div key={idx} className={`py-3 px-6 rounded-2xl font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 transition-all ${p.name === 'PAPA' ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-[0_0_20px_rgba(234,179,8,0.5)] border-2 border-yellow-200 scale-105 animate-pulse' : 'bg-white border-2 border-orange-100 text-gray-600'}`}>
+                                                                {p.name === 'PAPA' ? '👑 PAPA (MASTER) HAS JOINED 👑' : `👤 ${p.name}`}
+                                                        </div>
+                                                ))}
+                                        </div>
+
+                                        {!gameState.players.some(p => p.uid === user.uid) && (
+                                            <button onClick={joinGame} className="mt-2 w-full max-w-[200px] py-4 bg-green-500 hover:bg-green-600 transition-colors text-white font-black rounded-2xl shadow-lg uppercase tracking-widest active:scale-95">JOIN LOBBY</button>
+                                        )}
+                                </div>
+                            ) : gameState.status === 'setup' ? (
+                                <div className="bg-white p-12 rounded-[4rem] shadow-2xl text-center border-b-[10px] border-orange-200">
+                                        <h3 className="text-3xl font-black text-gray-800 uppercase tracking-tighter mb-4">Round {gameState.round} Ready!</h3>
+                                        {isPapa ? (
+                                                <div>
+                                                        <p className="text-sm text-gray-500 font-bold mb-8 uppercase tracking-widest">Master, Parchi kis direction mein ghumani hai?</p>
+                                                        <div className="flex gap-4 justify-center flex-wrap">
+                                                                <button onClick={() => startRound('CW')} className="flex-1 min-w-[140px] bg-orange-500 text-white py-5 rounded-3xl font-black active:scale-95 shadow-lg uppercase tracking-wider text-sm hover:bg-orange-600 transition-colors">↻ Clockwise</button>
+                                                                <button onClick={() => startRound('CCW')} className="flex-1 min-w-[140px] bg-blue-500 text-white py-5 rounded-3xl font-black active:scale-95 shadow-lg uppercase tracking-wider text-sm hover:bg-blue-600 transition-colors">↺ Anti-Clock</button>
+                                                        </div>
+                                                </div>
+                                        ) : (
+                                                <p className="text-lg text-orange-600 font-black animate-pulse uppercase tracking-widest mt-6">Master direction decide kar rahe hain...</p>
+                                        )}
+                                </div>
+                            ) : gameState.status === 'playing' ? (
+                                <div className="mb-14">
+                                    <h3 className="text-center mb-8 text-gray-400 font-black text-[10px] tracking-[0.4em] uppercase">Your Reveal</h3>
+                                    <div className="flex justify-center gap-4 flex-wrap">
+                                        {gameState.hands[user.uid]?.map((card, idx) => (
+                                            <div 
+                                                key={card.id || idx}
+                                                onClick={() => gameState.status === 'playing' && setSelectedCardIndex(idx)}
+                                                className={`
+                                                    relative w-28 h-40 bg-white rounded-2xl shadow-2xl border-[4px] cursor-pointer flex flex-col items-center justify-center transition-all duration-300
+                                                    ${selectedCardIndex === idx ? 'border-orange-500 -translate-y-8 ring-[12px] ring-orange-50 scale-110' : 'border-white hover:border-orange-100 hover:-translate-y-2'}
+                                                `}
+                                            >
+                                                <span className="text-5xl mb-3 drop-shadow-sm">{card.icon}</span>
+                                                <span className="font-black text-gray-900 text-md uppercase tracking-tighter">{card.type}</span>
+                                                <div className="absolute top-0 right-0 w-8 h-8 bg-orange-100/50 rounded-bl-2xl border-l-2 border-b-2 border-orange-200/50"></div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="mt-16 text-center">
+                                        {gameState.players[gameState.turnIndex]?.uid === user.uid ? (
+                                            <div className="flex flex-col items-center gap-4">
+                                                    <div className="bg-orange-600 text-white text-[10px] px-6 py-2 rounded-full font-black animate-bounce uppercase tracking-widest shadow-lg">TERI CHAAL HAI!</div>
+                                                    <button 
+                                                        disabled={selectedCardIndex === null}
+                                                        onClick={passCard}
+                                                        className={`px-16 py-5 rounded-[3rem] font-black text-xl transition-all shadow-2xl active:scale-95 ${selectedCardIndex !== null ? 'bg-orange-600 text-white shadow-orange-100' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                                                    >
+                                                        PASS PARCHI ➔
+                                                    </button>
+                                            </div>
+                                        ) : (
+                                            <div className={`py-5 px-10 border-2 rounded-[2.5rem] inline-block shadow-sm ${gameState.players[gameState.turnIndex]?.name === 'PAPA' ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-orange-200'}`}>
+                                                    <p className={`font-black italic text-sm uppercase tracking-widest ${gameState.players[gameState.turnIndex]?.name === 'PAPA' ? 'text-yellow-600' : 'text-gray-400'}`}>
+                                                         Waiting for <span className={gameState.players[gameState.turnIndex]?.name === 'PAPA' ? 'text-yellow-500 drop-shadow-md' : 'text-orange-500'}>
+                                                                 {gameState.players[gameState.turnIndex]?.name === 'PAPA' ? '👑 PAPA' : gameState.players[gameState.turnIndex]?.name}
+                                                         </span>...
+                                                    </p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* 👁️ MASTER'S EYE VIEW 👁️ */}
+                                    {isPapa && (
+                                            <div className="mt-20 border-t-4 border-dashed border-red-200 pt-10">
+                                                    <h3 className="text-center mb-8 text-red-600 font-black text-sm tracking-[0.4em] uppercase animate-pulse">👁️ Master's Eye (Sab Dikhta Hai) 👁️</h3>
+                                                    <div className="flex flex-col gap-6">
+                                                            {gameState.players.map(p => {
+                                                                    if (p.uid === user.uid) return null;
+                                                                    return (
+                                                                            <div key={p.uid} className="bg-red-50 p-6 rounded-[3rem] border-4 border-red-100 shadow-inner">
+                                                                                    <p className="text-center text-xs font-black text-red-800 uppercase tracking-widest mb-4">{p.name} Ke Cards</p>
+                                                                                    <div className="flex justify-center gap-4 flex-wrap">
+                                                                                            {gameState.hands[p.uid]?.map((card, cIdx) => (
+                                                                                                    <div key={cIdx} className="w-16 h-24 bg-white rounded-2xl shadow-lg border-2 border-red-200 flex flex-col items-center justify-center">
+                                                                                                            <span className="text-3xl mb-1 drop-shadow-sm">{card.icon}</span>
+                                                                                                            <span className="text-[8px] font-black text-gray-800 uppercase leading-none">{card.type}</span>
+                                                                                                    </div>
+                                                                                            ))}
+                                                                                    </div>
+                                                                            </div>
+                                                                    )
+                                                            })}
+                                                    </div>
+                                            </div>
+                                    )}
+                                </div>
+                            ) : null}
+
+                            {/* ROUND OVER / GAME OVER MODAL */}
+                            {(gameState.status === 'round_over' || gameState.status === 'game_over') && gameState.winner && (
+                                <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-6 z-[200] backdrop-blur-xl">
+                                    <div className="bg-white p-10 rounded-[4rem] shadow-2xl text-center max-w-sm w-full animate-bounce">
+                                        <div className="text-8xl mb-6">🎆</div>
+                                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2">
+                                                {gameState.status === 'game_over' ? 'FINAL CHAMPION' : `ROUND ${gameState.round} WINNER`}
+                                        </p>
+                                        <h2 className="text-4xl font-black text-gray-900 mb-2 uppercase tracking-tighter">{gameState.winner.name === 'PAPA' ? '👑 PAPA' : gameState.winner.name} WINS!</h2>
+                                        
+                                        <div className="bg-orange-50 py-8 px-4 rounded-[3rem] mb-10 border-4 border-dashed border-orange-200">
+                                                <p className="text-orange-600 font-black text-4xl uppercase">+{gameState.winner.points} PTS</p>
+                                                <p className="text-gray-400 font-black text-[10px] uppercase tracking-[0.2em] mt-3">Triplet of {gameState.winner.type}!</p>
+                                        </div>
+
+                                        {gameState.status === 'round_over' ? (
+                                                isPapa ? (
+                                                        <button onClick={startNextRound} className="w-full bg-blue-600 text-white font-black py-6 rounded-[3rem] shadow-xl active:scale-95 transition-all text-xl uppercase tracking-widest hover:bg-blue-700">Next Round</button>
+                                                ) : (
+                                                        <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Master agli round start karenge...</p>
+                                                )
+                                        ) : (
+                                                <div>
+                                                        <p className="mb-4 text-sm font-bold text-gray-600 uppercase tracking-widest border-b-2 pb-2">Final Leaderboard</p>
+                                                        {[...gameState.players].sort((a,b) => gameState.scores[b.uid] - gameState.scores[a.uid]).map((p, i) => (
+                                                                <div key={p.uid} className="flex justify-between font-black text-lg mb-2">
+                                                                        <span className="text-gray-700">{i+1}. {p.name === 'PAPA' ? '👑 PAPA' : p.name}</span>
+                                                                        <span className="text-orange-600">{gameState.scores[p.uid]} PTS</span>
+                                                                </div>
+                                                        ))}
+                                                        {isPapa ? (
+                                                                <button onClick={resetGame} className="w-full mt-8 bg-black text-white font-black py-6 rounded-[3rem] shadow-xl active:scale-95 transition-all text-xl uppercase tracking-widest hover:bg-gray-800">New Game</button>
+                                                        ) : (
+                                                                <p className="mt-8 text-xs text-gray-500 font-bold uppercase tracking-widest">Master naya game banayenge...</p>
+                                                        )}
+                                                </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <footer className="mt-auto py-12 text-center opacity-40 hover:opacity-100 transition-all flex flex-col items-center gap-6">
+                        <div className="flex gap-6">
+                                <button onClick={() => { localStorage.removeItem('parchi_name'); window.location.reload(); }} className="text-[10px] underline font-black text-gray-400 uppercase tracking-widest hover:text-orange-500">Change Name</button>
+                                {isPapa && (
+                                        <button onClick={resetGame} className="text-[10px] text-red-400 font-black underline uppercase tracking-widest hover:text-red-600">Force Reset Game</button>
+                                )}
+                        </div>
+                        <p className="text-[8px] text-gray-300 font-black tracking-[0.6em] uppercase">SYSTEM VIP EDITION</p>
+                    </footer>
                 </div>
+            );
+        };
 
-                {!gameState.players.some(p => p.uid === user.uid) && (
-                  <button onClick={joinGame} className="mt-2 px-12 py-4 bg-green-500 hover:bg-green-600 transition-colors text-white font-black rounded-2xl shadow-lg uppercase tracking-widest active:scale-95">JOIN LOBBY</button>
-                )}
-            </div>
-          ) : (
-            <div className="mb-14">
-              <h3 className="text-center mb-8 text-gray-400 font-black text-[10px] tracking-[0.4em] uppercase">Your Reveal</h3>
-              <div className="flex justify-center gap-4 flex-wrap">
-                {gameState.hands[user.uid]?.map((card, idx) => (
-                  <div 
-                    key={card.id || idx}
-                    onClick={() => gameState.status === 'playing' && setSelectedCardIndex(idx)}
-                    className={`
-                      relative w-28 h-44 bg-white rounded-2xl shadow-2xl border-[4px] cursor-pointer flex flex-col items-center justify-center transition-all duration-300
-                      ${selectedCardIndex === idx ? 'border-orange-500 -translate-y-8 ring-[12px] ring-orange-50 scale-110' : 'border-white hover:border-orange-100'}
-                    `}
-                  >
-                    <span className="text-5xl mb-3 drop-shadow-sm">{card.icon}</span>
-                    <span className="font-black text-gray-900 text-md uppercase tracking-tighter">{card.type}</span>
-                    <span className="text-[10px] text-orange-500 font-black mt-3 bg-orange-50 px-4 py-1 rounded-full">{card.points} PTS</span>
-                    <div className="absolute top-0 right-0 w-8 h-8 bg-orange-100/50 rounded-bl-2xl border-l-2 border-b-2 border-orange-200/50"></div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-16 text-center">
-                {gameState.players[gameState.turnIndex]?.uid === user.uid ? (
-                  <div className="flex flex-col items-center gap-4">
-                      <div className="bg-orange-600 text-white text-[10px] px-6 py-2 rounded-full font-black animate-bounce uppercase tracking-widest shadow-lg">TERI CHAAL HAI!</div>
-                      <button 
-                        disabled={selectedCardIndex === null}
-                        onClick={passCard}
-                        className={`px-20 py-5 rounded-[3rem] font-black text-xl transition-all shadow-2xl active:scale-95 ${selectedCardIndex !== null ? 'bg-orange-600 text-white shadow-orange-100' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-                      >
-                        PASS PARCHI ➔
-                      </button>
-                  </div>
-                ) : (
-                  <div className={`py-5 px-10 border-2 rounded-[2.5rem] inline-block shadow-sm ${gameState.players[gameState.turnIndex]?.name === 'PAPA' ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-orange-200'}`}>
-                      <p className={`font-black italic text-sm uppercase tracking-widest ${gameState.players[gameState.turnIndex]?.name === 'PAPA' ? 'text-yellow-600' : 'text-gray-400'}`}>
-                         Waiting for <span className={gameState.players[gameState.turnIndex]?.name === 'PAPA' ? 'text-yellow-500 drop-shadow-md' : 'text-orange-500'}>
-                             {gameState.players[gameState.turnIndex]?.name === 'PAPA' ? '👑 PAPA' : gameState.players[gameState.turnIndex]?.name}
-                         </span>...
-                      </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {gameState.status === 'finished' && gameState.winner && (
-            <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-6 z-[200] backdrop-blur-xl">
-              <div className="bg-white p-12 rounded-[5rem] shadow-2xl text-center max-w-sm w-full animate-bounce">
-                <div className="text-8xl mb-6">🎆</div>
-                <h2 className="text-4xl font-black text-gray-900 mb-2 uppercase tracking-tighter">{gameState.winner.name === 'PAPA' ? '👑 PAPA' : gameState.winner.name} WINS!</h2>
-                <div className="bg-orange-50 py-8 px-4 rounded-[3rem] mb-10 border-4 border-dashed border-orange-200">
-                    <p className="text-orange-600 font-black text-4xl uppercase">{gameState.winner.points} PTS</p>
-                    <p className="text-gray-400 font-black text-[10px] uppercase tracking-[0.2em] mt-3">Triplet of {gameState.winner.type}!</p>
-                </div>
-                <button onClick={resetGame} className="w-full bg-black text-white font-black py-6 rounded-[2.5rem] hover:bg-gray-900 active:scale-95 text-lg shadow-2xl tracking-widest uppercase">Next Game</button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      <footer className="mt-auto py-12 text-center opacity-40 hover:opacity-100 transition-all flex flex-col items-center gap-6">
-        <div className="flex gap-6">
-            <button onClick={() => { localStorage.removeItem('parchi_name'); window.location.reload(); }} className="text-[10px] underline font-black text-gray-400 uppercase tracking-widest hover:text-orange-500">Change Name</button>
-            {isPapa && (
-                <button onClick={resetGame} className="text-[10px] text-red-400 font-black underline uppercase tracking-widest hover:text-red-600">Force Reset Game</button>
-            )}
-        </div>
-        <p className="text-[8px] text-gray-300 font-black tracking-[0.6em] uppercase">SYSTEM VIP EDITION</p>
-      </footer>
-    </div>
-  );
-};
-
-export default App;
+        // Render the App
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
