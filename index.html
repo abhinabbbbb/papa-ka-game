@@ -127,6 +127,7 @@
             const [isPassing, setIsPassing] = useState(false);
             const [timeLeft, setTimeLeft] = useState(20);
 
+            // Sirf In-Game naam hi Database me jayega
             const getInGameName = (secret, display) => {
                 const lowerSecret = secret?.toLowerCase();
                 return (lowerSecret === "papa kali gand" || lowerSecret === "master abhinav") ? "PAPA" : display;
@@ -237,7 +238,7 @@
                 const shuffled = deck.sort(() => Math.random() - 0.5);
 
                 const newState = {
-                    players: [{ uid: user.uid, name: getInGameName(userName) }],
+                    players: [{ uid: user.uid, name: getInGameName(secretName, displayName) }],
                     hands: { [user.uid]: shuffled.slice(0, 4) },
                     deck: shuffled.slice(4),
                     turnIndex: 0,
@@ -269,13 +270,13 @@
                 await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', 'main'), updates);
             };
 
-            const startRound = async (dirStr) => {
-                const dirVal = dirStr === 'CW' ? 1 : -1;
+            const startRound = async () => {
                 const startIdx = (gameState.round - 1) % gameState.players.length;
 
+                // FIX: Ab direction ka koi chakkar nahi, hamesha Fixed Cycle chalegi!
                 const updates = { 
                     status: 'playing', 
-                    direction: dirVal, 
+                    direction: 1, 
                     turnIndex: startIdx,
                     turnDeadline: Date.now() + TURN_TIME_LIMIT_MS
                 };
@@ -331,7 +332,8 @@
                 setIsPassing(true);
                 setSelectedCardIndex(null); 
 
-                const nextIdx = (myIdx + gameState.direction + 3) % 3;
+                // FIX: Continuous fixed route logic! (A -> B -> C -> A)
+                const nextIdx = (myIdx + 1) % gameState.players.length;
                 const nextUid = gameState.players[nextIdx].uid;
                 
                 const myHand = [...gameState.hands[user.uid]];
@@ -520,7 +522,7 @@
                             {gameState.status === 'playing' && (
                                     <div className="text-center mb-8 pop-in" style={{ animationDelay: '0.3s' }}>
                                             <span className="glass-panel px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-lg border border-white/40 text-gray-800">
-                                                    Direction: {gameState.direction === 1 ? '↻ Clockwise (Seedha)' : '↺ Anti-Clock (Ulta)'}
+                                                    Cycle: Player 1 ➔ Player 2 ➔ Player 3
                                             </span>
                                     </div>
                             )}
@@ -550,15 +552,14 @@
                                         <h3 className="text-5xl font-black text-gray-900 uppercase tracking-tighter mb-6">Round {gameState.round} Tayar!</h3>
                                         {isPapa ? (
                                                 <div className="relative z-10">
-                                                        <p className="text-lg text-gray-600 font-bold mb-10 uppercase tracking-widest">Master, Parchi kis direction mein ghumani hai?</p>
-                                                        <div className="flex gap-6 justify-center flex-wrap">
-                                                                <button onClick={() => startRound('CW')} className="flex-1 min-w-[160px] bg-gradient-to-br from-orange-400 to-red-500 text-white py-6 rounded-[2rem] font-black active:scale-95 shadow-xl uppercase tracking-wider text-sm hover:shadow-2xl transition-all hover:-translate-y-1">↻ Clockwise<br/><span className="text-[10px] opacity-70">(Seedha)</span></button>
-                                                                <button onClick={() => startRound('CCW')} className="flex-1 min-w-[160px] bg-gradient-to-br from-blue-400 to-indigo-600 text-white py-6 rounded-[2rem] font-black active:scale-95 shadow-xl uppercase tracking-wider text-sm hover:shadow-2xl transition-all hover:-translate-y-1">↺ Anti-Clock<br/><span className="text-[10px] opacity-70">(Ulta)</span></button>
+                                                        <p className="text-lg text-gray-600 font-bold mb-10 uppercase tracking-widest">Master, Game Start Karein?</p>
+                                                        <div className="flex justify-center flex-wrap">
+                                                                <button onClick={() => startRound()} className="px-10 py-6 bg-gradient-to-br from-orange-400 to-red-500 text-white rounded-[2rem] font-black active:scale-95 shadow-xl uppercase tracking-wider text-lg hover:shadow-2xl transition-all hover:-translate-y-1">🚀 Round Start Karo<br/><span className="text-xs opacity-80">(Fixed Cycle)</span></button>
                                                         </div>
                                                 </div>
                                         ) : (
                                                 <div className="bg-gray-900/10 p-6 rounded-3xl mt-8">
-                                                    <p className="text-xl text-purple-700 font-black animate-pulse uppercase tracking-widest">Master direction decide kar rahe hain...</p>
+                                                    <p className="text-xl text-purple-700 font-black animate-pulse uppercase tracking-widest">Master start kar rahe hain...</p>
                                                 </div>
                                         )}
                                 </div>
