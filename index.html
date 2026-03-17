@@ -26,19 +26,19 @@
     <div id="root"></div>
 
     <script type="text/babel">
+        // Purane test errors clear kar rahe hain
+        localStorage.removeItem('fixed_api_key');
+
         const { useState, useEffect } = React;
 
         // =========================================================================
-        // 🛑 API KEY TYPO FIXED 🛑
-        // =========================================================================
-        // Pichli baar 'O' (Alphabet) type ho gaya tha '0' (Zero) ki jagah.
-        // Ab ye exact tere screenshot wali original key hai.
+        // 💯 ORIGINAL EXACT CONFIG (Reverted back to your first screenshot)
         // =========================================================================
         const myHardcodedConfig = {
-            apiKey: "AIzaSyDzr59r0NvNpo9-VllDbdGz--MUPjAq6jo", // Fixed 'O' to '0'
+            apiKey: "AIzaSyDzr59rONvNpo9-VllDbdGz--MUPjAq6jo", // 'O' is correct!
             authDomain: "papa-ka-game.firebaseapp.com",
             projectId: "papa-ka-game",
-            storageBucket: "papa-ka-game.firebasestorage.app",
+            storageBucket: "papa-ka-game.firebasestorage.app", // firebasestorage is correct!
             messagingSenderId: "972552037901",
             appId: "1:972552037901:web:0e8c86fe84f8efb1169744",
             measurementId: "G-Q44XZ9GSMN"
@@ -55,7 +55,6 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
         
-        // Proper segment count for Firestore paths
         const currentAppId = typeof __app_id !== 'undefined' ? __app_id : "parchi-final-v1";
 
         const CARDS_DATA = [
@@ -76,24 +75,24 @@
             const [error, setError] = useState("");
             const [detailedError, setDetailedError] = useState("");
             const [loginError, setLoginError] = useState("");
+            const [currentDomain, setCurrentDomain] = useState(window.location.hostname);
 
             const getInGameName = (name) => (name === "master abhinav" ? "PAPA" : name);
             const getRoleTitle = (name) => (name === "master abhinav" ? "Master" : "Player");
 
-            // 1. Auth Logic (Rule 3)
+            // 1. Auth Logic 
             useEffect(() => {
                 const initAuth = async () => {
                     try {
                         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                             await auth.signInWithCustomToken(__initial_auth_token);
                         } else {
-                            // Valid API Key + Anonymous Auth ON = Success
                             await auth.signInAnonymously();
                         }
                     } catch (err) {
                         console.error("Auth Fail:", err);
-                        setError("Firebase Auth Setup Adhura Hai!");
-                        setDetailedError(err.message + " . Agar key theek hai toh check karo Anonymous login ON hai ya nahi.");
+                        setError("Firebase Auth Setup Blocked!");
+                        setDetailedError(err.message);
                         setLoading(false);
                     }
                 };
@@ -109,7 +108,7 @@
                 return () => unsubscribe();
             }, []);
 
-            // 2. Database Sync (Rule 1)
+            // 2. Database Sync
             useEffect(() => {
                 if (!user || !userName) return;
                 
@@ -121,10 +120,10 @@
                 }, (err) => {
                     console.error("Firestore Error:", err);
                     setError("Database Permission Blocked!");
-                    setDetailedError(err.message + ". Rules mein check karo ki allow read, write if true; likha hai ya nahi!");
+                    setDetailedError(err.message);
                 });
                 return () => unsubscribe();
-            }, [user, userName, error]);
+            }, [user, userName]);
 
             const handleLogin = () => {
                 const trimmed = tempName.trim();
@@ -217,26 +216,31 @@
                 </div>
             );
 
-            if (error) return (
-                <div className="h-screen flex flex-col items-center justify-center bg-red-50 p-8 text-center">
-                    <h2 className="text-4xl font-black text-red-600 mb-6 uppercase tracking-tighter">ABHI BHI MASLA HAI!</h2>
-                    <div className="bg-white p-10 rounded-[4rem] shadow-2xl border-b-[15px] border-red-100 max-w-sm w-full">
-                        <p className="text-gray-900 font-black mb-6 leading-tight uppercase text-sm tracking-widest">{error}</p>
-                        <div className="bg-red-50 p-5 rounded-3xl text-[11px] text-red-700 font-mono break-words text-left border border-red-100">
-                            <strong>Firebase Says:</strong><br/>
-                            {detailedError || "Pata nahi kya hua, console check karo."}
+            if (error) {
+                return (
+                    <div className="h-screen flex flex-col items-center justify-center bg-red-50 p-8 text-center">
+                        <h2 className="text-4xl font-black text-red-600 mb-6 uppercase tracking-tighter">ERROR AAYA HAI!</h2>
+                        
+                        <div className="bg-white p-10 rounded-[4rem] shadow-2xl border-b-[15px] border-red-100 max-w-sm w-full">
+                            <p className="text-gray-900 font-black mb-4 leading-tight uppercase text-sm tracking-widest">{error}</p>
+                            
+                            <div className="bg-red-50 p-5 rounded-3xl text-[11px] text-red-700 font-mono break-words text-left border border-red-100 mb-4">
+                                <strong>Firebase Says:</strong><br/>
+                                {detailedError}
+                            </div>
+                            
+                            {/* DOMAIN CHECKER */}
+                            <div className="bg-orange-50 p-4 rounded-3xl text-[10px] text-orange-800 text-left border border-orange-200">
+                                <b>Your Current URL:</b><br/> 
+                                <span className="font-mono bg-white px-2 py-1 rounded shadow-sm inline-block mt-1">{currentDomain}</span><br/>
+                                <span className="mt-2 inline-block">Kya ye URL exactly <b>papa-ka-game.vercel.app</b> hai? Agar nahi, toh is naye URL ko bhi Firebase me Add Domain karo.</span>
+                            </div>
                         </div>
+                        
+                        <button onClick={() => window.location.reload()} className="mt-12 bg-red-600 text-white px-16 py-5 rounded-[2.5rem] font-black shadow-2xl uppercase active:scale-95 transition-all text-sm tracking-widest">Force Reload</button>
                     </div>
-                    
-                    <div className="mt-10 text-left text-[11px] text-gray-500 space-y-4 max-w-sm mx-auto bg-white/40 p-6 rounded-[2rem]">
-                        <p>1. <b>API Key Check:</b> Agar abhi bhi error hai, toh ek baar Firebase se khud copy karke key replace karo.</p>
-                        <p>2. <b>Anonymous Login:</b> Authentication {'>'} Sign-in method mein <b>Anonymous</b> on karo.</p>
-                        <p>3. <b>Firestore Rules:</b> Line 19 ke baad wale faltu instructions delete karo!</p>
-                    </div>
-                    
-                    <button onClick={() => window.location.reload()} className="mt-12 bg-red-600 text-white px-16 py-5 rounded-[2.5rem] font-black shadow-2xl uppercase active:scale-95 transition-all text-sm tracking-widest">Reload Karo!</button>
-                </div>
-            );
+                );
+            }
 
             if (!userName) {
                 return (
