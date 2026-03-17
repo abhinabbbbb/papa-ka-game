@@ -26,19 +26,19 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // Purane test errors clear kar rahe hain
-        localStorage.removeItem('fixed_api_key');
-
         const { useState, useEffect } = React;
 
         // =========================================================================
-        // 💯 ORIGINAL EXACT CONFIG (Reverted back to your first screenshot)
+        // 💯 FINALLY FIXED CONFIG SYSTEM
         // =========================================================================
+        const storedApiKey = localStorage.getItem('fixed_api_key');
+        
         const myHardcodedConfig = {
-            apiKey: "AIzaSyDzr59rONvNpo9-VllDbdGz--MUPjAq6jo", // 'O' is correct!
+            // Agar tune browser mein key save ki hai toh wo use hogi, warna ye default
+            apiKey: storedApiKey || "AIzaSyDzr59rONvNpo9-VllDbdGz--MUPjAq6jo", 
             authDomain: "papa-ka-game.firebaseapp.com",
             projectId: "papa-ka-game",
-            storageBucket: "papa-ka-game.firebasestorage.app", // firebasestorage is correct!
+            storageBucket: "papa-ka-game.firebasestorage.app", 
             messagingSenderId: "972552037901",
             appId: "1:972552037901:web:0e8c86fe84f8efb1169744",
             measurementId: "G-Q44XZ9GSMN"
@@ -76,6 +76,7 @@
             const [detailedError, setDetailedError] = useState("");
             const [loginError, setLoginError] = useState("");
             const [currentDomain, setCurrentDomain] = useState(window.location.hostname);
+            const [apiInput, setApiInput] = useState("");
 
             const getInGameName = (name) => (name === "master abhinav" ? "PAPA" : name);
             const getRoleTitle = (name) => (name === "master abhinav" ? "Master" : "Player");
@@ -217,27 +218,55 @@
             );
 
             if (error) {
+                const isApiKeyError = detailedError.includes('api-key-not-valid') || detailedError.includes('API key not valid');
+                
                 return (
-                    <div className="h-screen flex flex-col items-center justify-center bg-red-50 p-8 text-center">
+                    <div className="min-h-screen flex flex-col items-center justify-center bg-red-50 p-8 text-center">
                         <h2 className="text-4xl font-black text-red-600 mb-6 uppercase tracking-tighter">ERROR AAYA HAI!</h2>
                         
-                        <div className="bg-white p-10 rounded-[4rem] shadow-2xl border-b-[15px] border-red-100 max-w-sm w-full">
+                        <div className="bg-white p-10 rounded-[4rem] shadow-2xl border-b-[15px] border-red-100 max-w-md w-full">
                             <p className="text-gray-900 font-black mb-4 leading-tight uppercase text-sm tracking-widest">{error}</p>
                             
-                            <div className="bg-red-50 p-5 rounded-3xl text-[11px] text-red-700 font-mono break-words text-left border border-red-100 mb-4">
+                            <div className="bg-red-50 p-5 rounded-3xl text-[11px] text-red-700 font-mono break-words text-left border border-red-100 mb-6">
                                 <strong>Firebase Says:</strong><br/>
                                 {detailedError}
                             </div>
                             
-                            {/* DOMAIN CHECKER */}
-                            <div className="bg-orange-50 p-4 rounded-3xl text-[10px] text-orange-800 text-left border border-orange-200">
-                                <b>Your Current URL:</b><br/> 
-                                <span className="font-mono bg-white px-2 py-1 rounded shadow-sm inline-block mt-1">{currentDomain}</span><br/>
-                                <span className="mt-2 inline-block">Kya ye URL exactly <b>papa-ka-game.vercel.app</b> hai? Agar nahi, toh is naye URL ko bhi Firebase me Add Domain karo.</span>
-                            </div>
+                            {isApiKeyError ? (
+                                <div className="bg-orange-50 p-6 rounded-3xl text-left border border-orange-200">
+                                    <p className="text-sm font-black text-orange-800 mb-2">API KEY YAHAN PASTE KARO:</p>
+                                    <p className="text-[10px] text-orange-600 mb-4">Firebase Console -> Project Settings se 'apiKey' copy karke yahan daalo.</p>
+                                    <input 
+                                        type="text" 
+                                        value={apiInput}
+                                        onChange={(e) => setApiInput(e.target.value)}
+                                        placeholder="AIzaSy..."
+                                        className="w-full p-4 rounded-xl border border-orange-300 font-mono text-xs mb-4 outline-none focus:ring-2 focus:ring-orange-500"
+                                    />
+                                    <button 
+                                        onClick={() => {
+                                            if(apiInput.trim()) {
+                                                localStorage.setItem('fixed_api_key', apiInput.trim());
+                                                window.location.reload();
+                                            }
+                                        }}
+                                        className="w-full bg-orange-600 text-white py-3 rounded-xl font-black uppercase text-xs"
+                                    >
+                                        Save & Start Game
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="bg-orange-50 p-4 rounded-3xl text-[10px] text-orange-800 text-left border border-orange-200">
+                                    <b>Your Current URL:</b><br/> 
+                                    <span className="font-mono bg-white px-2 py-1 rounded shadow-sm inline-block mt-1">{currentDomain}</span><br/>
+                                    <span className="mt-2 inline-block">Kya ye URL Firebase ke <b>Authorized Domains</b> mein added hai?</span>
+                                </div>
+                            )}
                         </div>
                         
-                        <button onClick={() => window.location.reload()} className="mt-12 bg-red-600 text-white px-16 py-5 rounded-[2.5rem] font-black shadow-2xl uppercase active:scale-95 transition-all text-sm tracking-widest">Force Reload</button>
+                        {!isApiKeyError && (
+                            <button onClick={() => window.location.reload()} className="mt-12 bg-red-600 text-white px-16 py-5 rounded-[2.5rem] font-black shadow-2xl uppercase active:scale-95 transition-all text-sm tracking-widest">Force Reload</button>
+                        )}
                     </div>
                 );
             }
@@ -348,6 +377,7 @@
                         <div className="flex gap-12">
                             <button onClick={() => { localStorage.removeItem('parchi_name'); window.location.reload(); }} className="text-[11px] underline font-black text-gray-400 uppercase tracking-[0.4em] hover:text-orange-600 transition-colors">Switch User</button>
                             <button onClick={resetGame} className="text-[11px] text-red-500 underline font-black uppercase tracking-[0.4em] hover:text-red-700 transition-colors">Full Reset</button>
+                            <button onClick={() => { localStorage.removeItem('fixed_api_key'); window.location.reload(); }} className="text-[11px] text-blue-500 underline font-black uppercase tracking-[0.4em] hover:text-blue-700 transition-colors">Reset API Key</button>
                         </div>
                         <p className="text-[9px] text-gray-300 font-black tracking-[1em] uppercase">PAPA EDITION V1</p>
                     </footer>
