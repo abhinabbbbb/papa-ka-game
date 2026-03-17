@@ -28,9 +28,15 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // --- Firebase Configuration (Verifying from Screenshot) ---
+        // =========================================================================
+        // 🛑 BHAI YAHAN DHYAN DE 🛑
+        // =========================================================================
+        // Maine jo screenshot se type kiya tha, usme pakka koi spelling mistake hai.
+        // Apne Firebase Console -> Project Settings mein jao aur wahan se apna 
+        // asli firebaseConfig pura copy karke is niche wale block ko replace kar do!
+        // =========================================================================
         const myHardcodedConfig = {
-            apiKey: "AIzaSyDzr59rONvNpo9-VllDbdGz--MUPjAq6jo",
+            apiKey: "AIzaSyDzr59rONvNpo9-VllDbdGz--MUPjAq6jo", // <-- Isme typing mistake ho sakti hai! Copy paste karna wahan se.
             authDomain: "papa-ka-game.firebaseapp.com",
             projectId: "papa-ka-game",
             storageBucket: "papa-ka-game.firebasestorage.app",
@@ -88,7 +94,7 @@
                     } catch (err) {
                         console.error("Auth Fail:", err);
                         setError("Firebase Auth Setup Adhura Hai!");
-                        setDetailedError(err.message + ". Key check karo ya Anonymous enable karo!");
+                        setDetailedError(err.message + ". Key copy-paste karo Firebase Console se!");
                         setLoading(false);
                     }
                 };
@@ -224,7 +230,7 @@
                     </div>
                     
                     <div className="mt-10 text-left text-[11px] text-gray-500 space-y-4 max-w-sm mx-auto bg-white/40 p-6 rounded-[2rem]">
-                        <p>1. <b>API Key Check:</b> Settings mein jaakar check karo ki Key exact match ho rahi hai (Screenshot dekho).</p>
+                        <p>1. <b>API Key Check:</b> Firebase Console se apna pura `firebaseConfig` block <b>copy karke paste</b> karo. Screenshot se type karne mein mistake hui hai!</p>
                         <p>2. <b>Anonymous Login:</b> Authentication {'>'} Sign-in method mein <b>Anonymous</b> on karo.</p>
                         <p>3. <b>Firestore Rules:</b> Line 19 ke baad wale faltu instructions delete karo!</p>
                     </div>
